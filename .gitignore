@@ -1,0 +1,6 @@
+.devenv/
+.direnv/
+bin/
+obj/
+result
+result-*
