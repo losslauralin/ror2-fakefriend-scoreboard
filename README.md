@@ -1,70 +1,32 @@
 # FakeFriend Scoreboard
 
-让 [FakeFriend](https://thunderstore.io/c/riskofrain2/p/NotStudio/FakeFriend/) 的 AI bot 出现在原版 **Tab 计分板（玩家列表）** 里。
-计分板每条自带的物品图标 / 装备图标来自 `master.inventory`，所以 bot 一进列表，**它的物品就能直接看了**。
+Risk of Rain 2 BepInEx plugin. Gives [FakeFriend](https://thunderstore.io/c/riskofrain2/p/NotStudio/FakeFriend/)
+bots their own strip in the Tab scoreboard, so they appear in the player list with their items and equipment —
+the vanilla strip already subscribes to `master.inventory`.
 
-## 为什么 bot 原本不在列表里
+Requires FakeFriend. Client-side UI: no change to difficulty scaling, player count or run logic.
 
-- 原版计分板由 `RoR2.UI.ScoreboardController.Rebuild()` 生成，数据源只有 `PlayerCharacterMasterController.instances`。
-- FakeFriend 用 AI master prefab（`CommandoMonsterMaster` 或对应 survivor 的 AI master）生成 bot：
-  `teamIndexOverride = TeamIndex.Player`、`minionOwnership.SetOwner(host)`，
-  **没有 `PlayerCharacterMasterController`** —— 这正是它"不占 player slot / 不算难度缩放"的实现方式，
-  代价就是永远进不了计分板（只在 HUD 的 ally card 里）。
-- FakeFriend 自身没有任何计分板相关的 hook（反编译可见）。
-
-## 做法
-
-独立插件，不改 FakeFriend.dll，纯客户端 UI：
-
-1. `Prefix` 接管 `ScoreboardController.Rebuild()`：
-   真玩家照抄原版过滤条件（`activeInHierarchy` / `GetBody() != null` / `Util.GetBestMasterName != null`），
-   然后 `SetStripCount(n)` + `stripAllocator.elements[i].SetMaster(master)` 追加 bot，最后跳过原版。
-2. `Postfix` `Util.GetBestMasterName(CharacterMaster)`：bot 没有 NetworkUser，名字大概率是 null，
-   只对名字形如 `FakeFriend N` 的 master 兜底返回它的名字。
-3. bot 列表优先读 FakeFriend 自己的数据（权威）：`FakeFriendPlugin.bot` → `BotManager.Bots[]` → `FakeBot.Master`
-   （闭源 + 全是 internal，只能反射）；任何一个环节变了就退回按 `master.name` 扫描。
-4. 整段逻辑包在 `try/catch` 里：出任何异常就 `return true` 让原版 Rebuild 跑，计分板不会空掉。
-
-不碰：难度缩放、玩家数、网络状态、结算逻辑。计分板是客户端 UI，谁装了插件谁能看到 bot 的条。
-
-## 开发环境
-
-`devenv`（官方 flake-parts 模板）+ `ilspycmd`：
+## Install
 
 ```bash
-direnv allow          # 或 nix develop --no-pure-eval --accept-flake-config
-./scripts/build.sh            # 只编译
-./scripts/build.sh --install  # 编译并装进 r2modman 的 Default profile
+./scripts/package.sh                       # -> dist/FakeFriendScoreboard-<version>.zip
 ```
 
-游戏程序集不用自己反编译：`RiskOfRain2.GameLibs`（BepInEx nuget feed）是 **stripped + publicized** 版本，
-配合 `src/AssemblyInfo.cs` 里的 `[assembly: SecurityPermission(...SkipVerification = true)]`，
-可以直接读写游戏里的 private / internal 成员，成员名由编译器校验。
-见 [R2Wiki: Assembly References](https://risk-of-thunder.github.io/R2Wiki/Mod-Creation/C%23-Programming/Assembly-References/)。
+r2modman → **Settings → Import local mod** → pick that zip → install into the profile you play.
 
-`scripts/decompile.sh` 是备用的：需要读游戏源码时用它把相关类型 dump 到 `decompile/`（已 gitignore）。
+A bot left dead leaves the list until it respawns; a bot set to items mode `None` has nothing to show.
 
-## 作为 r2modman 的 local mod 安装
+## Build and update
 
 ```bash
-./scripts/package.sh     # 产出 dist/FakeFriendScoreboard-0.1.0.zip（Thunderstore 格式）
+direnv allow                              # devenv shell: dotnet, ilspycmd, python3
+./scripts/build.sh --install              # rebuild and overwrite the DLL r2modman installed
+./scripts/package.sh                      # rebuild the importable zip
 ```
 
-r2modman → **Settings → Import local mod** → 选那个 zip → 装进当前 profile。
-之后它就是 `mods.yml` 里受管的本地 mod（可启用/禁用、随 profile 导出），dll 位置由 r2modman 决定。
+`--install` overwrites the copy r2modman manages, and refuses to create a second one: two DLLs with the same plugin
+GUID break BepInEx.
 
-注意：**不要和手动 copy 的副本共存**。之前用 `./scripts/build.sh --install` 放进去的
-`BepInEx/plugins/FakeFriendScoreboard/` 如果和 r2modman 装出来的目录不是同一个，会加载两份同 GUID 的插件，
-BepInEx 会报重复；确认导入成功后把多余那份删掉。以后更新代码用
-`./scripts/build.sh --install`（覆盖同一个目录）或重新 Import 一次 zip。
-
-## 测试
-
-1. 用 r2modman 启动 modded profile，开一局带 1–4 个 FakeFriend。
-2. 按住 **Tab**：真玩家条之后应该多出 `FakeFriend 1..4` 的条，带等级、金钱、物品图标、装备。
-3. 排查：`BepInEx/LogOutput.log` 里应有
-   `FakeFriend Scoreboard 0.1.0 loaded.` 和
-   `FakeFriend 1.2.0: bot list found (BotManager.Bots).`（或 `internals changed shape, using name scan.`）
-   出现 `scoreboard rebuild failed, falling back to vanilla: ...` 说明接管失败，贴日志给我。
-
-已知取舍：bot 死亡（body 被销毁）时它的条会消失，复活后回来；item mode 设成 None 的 bot 自然没有物品图标。
+Game API members come from `RiskOfRain2.GameLibs` (stripped and publicized), so the compiler checks every name and
+nothing needs decompiling. Why the bots were invisible, how the bot list is read, and the log lines worth grepping
+live in `AGENTS.md`.

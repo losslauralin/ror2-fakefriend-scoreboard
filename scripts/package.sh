@@ -21,7 +21,8 @@ dotnet build "$ROOT/src/FakeFriendScoreboard.csproj" -c Release
 rm -rf "$STAGE"
 mkdir -p "$STAGE"
 cp "$ROOT/Thunderstore/manifest.json" "$ROOT/Thunderstore/icon.png" "$STAGE/"
-cp "$ROOT/Thunderstore/README.md" "$ROOT/Thunderstore/CHANGELOG.md" "$STAGE/"
+cp "$ROOT/Thunderstore/README.md" "$STAGE/"
+cp "$ROOT/CHANGELOG.md" "$STAGE/"
 cp "$DLL" "$STAGE/"
 
 rm -f "$ZIP"

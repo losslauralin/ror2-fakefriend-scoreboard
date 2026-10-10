@@ -18,7 +18,8 @@ FakeFriend is **closed source**; this plugin never modifies it.
 | `scripts/package.sh` | Thunderstore-format zip in `dist/` for r2modman **Import local mod** |
 | `scripts/make-icon.py` | regenerates `Thunderstore/icon.png` (pure python, no gfx libs) |
 | `scripts/decompile.sh` | fallback: dumps game types to `decompile/` (gitignored) |
-| `Thunderstore/` | `manifest.json`, `icon.png`, mod-page `README.md`, `CHANGELOG.md` |
+| `Thunderstore/` | `manifest.json`, `icon.png`, mod-page `README.md` |
+| `README.md` / `CHANGELOG.md` | repo readme; changelog is copied into the zip by `package.sh` |
 | `decompile/`, `dist/`, `bin/`, `obj/` | generated, gitignored — never commit |
 
 Machine facts: game `~/.local/share/Steam/steamapps/common/Risk of Rain 2` (Unity 2021.3.45f2, code split across
