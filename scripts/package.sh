@@ -9,6 +9,13 @@ DLL="$ROOT/src/bin/Release/netstandard2.1/FakeFriendScoreboard.dll"
 STAGE="$ROOT/dist/$NAME"
 ZIP="$ROOT/dist/$NAME-$VERSION.zip"
 
+# 版本号必须两处一致：Plugin.PluginVersion 与 manifest.json(version_number)
+PLUGIN_VERSION="$(grep -oP 'PluginVersion = "\K[0-9.]+' "$ROOT/src/Plugin.cs")"
+if [ "$PLUGIN_VERSION" != "$VERSION" ]; then
+  echo "版本不一致：Plugin.cs=$PLUGIN_VERSION manifest.json=$VERSION（两处都要改）" >&2
+  exit 1
+fi
+
 dotnet build "$ROOT/src/FakeFriendScoreboard.csproj" -c Release
 
 rm -rf "$STAGE"
