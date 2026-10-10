@@ -4,7 +4,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PROFILE="${R2MODMAN_PROFILE:-$HOME/.config/r2modmanPlus-local/RiskOfRain2/profiles/Default}"
-PLUGIN_DIR="$PROFILE/BepInEx/plugins/FakeFriendScoreboard"
+# r2modman 导入本地 mod 时没有 author，用的目录名是 Unknown-<manifest.name>。
+PLUGIN_DIR="$PROFILE/BepInEx/plugins/Unknown-FakeFriendScoreboard"
 
 args=(-c Release)
 if [ "${1:-}" = "--install" ]; then

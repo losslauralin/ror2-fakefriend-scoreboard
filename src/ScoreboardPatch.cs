@@ -48,15 +48,14 @@ namespace FakeFriendScoreboard
                     strips[index].SetMaster(masters[i]);
 
                 for (int i = 0; i < bots.Count; i++, index++)
-                {
                     strips[index].SetMaster(bots[i]);
-                    Plugin.Log.LogDebug($"scoreboard: strip {index} <- {bots[i].name}");
-                }
 
-                if (total != lastLoggedTotal)
+                // Rebuild 每帧都跑：只在条的组成变化时打一行，避免刷日志。
+                var signature = Describe(masters.Count, bots);
+                if (signature != lastSignature)
                 {
-                    lastLoggedTotal = total;
-                    Plugin.Log.LogInfo($"scoreboard: {masters.Count} player strip(s) + {bots.Count} bot strip(s).");
+                    lastSignature = signature;
+                    Plugin.Log.LogInfo(signature);
                 }
 
                 return false;   // 跳过原版 Rebuild
@@ -68,8 +67,26 @@ namespace FakeFriendScoreboard
             }
         }
 
-        private static int lastLoggedTotal = -1;
+        private static string lastSignature;
         private static bool loggedOnce;
+
+        private static string Describe(int players, System.Collections.Generic.List<CharacterMaster> bots)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.Append("scoreboard: ").Append(players).Append(" player strip(s)");
+            sb.Append(" + ").Append(bots.Count).Append(" bot strip(s)");
+            if (bots.Count > 0)
+            {
+                sb.Append(" [");
+                for (int i = 0; i < bots.Count; i++)
+                {
+                    if (i > 0) sb.Append(", ");
+                    sb.Append(bots[i].name);
+                }
+                sb.Append(']');
+            }
+            return sb.ToString();
+        }
 
         private static void LogOnce(Exception e)
         {
