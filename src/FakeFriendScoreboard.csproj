@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>FakeFriendScoreboard</AssemblyName>
+    <RootNamespace>FakeFriendScoreboard</RootNamespace>
+    <Version>0.1.0</Version>
+
+    <!-- BepInEx 的 nuget feed 提供 RiskOfRain2.GameLibs（游戏程序集的
+         stripped + publicized 版本），所以不需要自己反编译游戏、也不需要
+         自己 publicize。见 R2Wiki "Assembly References"。 -->
+    <RestoreAdditionalProjectSources>
+      https://api.nuget.org/v3/index.json;
+      https://nuget.bepinex.dev/v3/index.json
+    </RestoreAdditionalProjectSources>
+
+    <!-- Publicizer001：使用被 publicize 出来的私有成员时的提示性告警。 -->
+    <NoWarn>$(NoWarn);Publicizer001</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Analyzers" Version="1.0.*">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="BepInEx.Core" Version="5.4.21" />
+    <PackageReference Include="UnityEngine.Modules" Version="2021.3.45" IncludeAssets="compile" />
+    <PackageReference Include="RiskOfRain2.GameLibs" Version="*-*" />
+  </ItemGroup>
+
+  <!-- dotnet build -p:InstallDir=<profile>/BepInEx/plugins/FakeFriendScoreboard -->
+  <Target Name="InstallToProfile" AfterTargets="Build" Condition="'$(InstallDir)' != ''">
+    <MakeDir Directories="$(InstallDir)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(InstallDir)" />
+    <Message Importance="high" Text="installed $(TargetFileName) -> $(InstallDir)" />
+  </Target>
+
+</Project>
