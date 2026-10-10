@@ -44,6 +44,20 @@ direnv allow          # 或 nix develop --no-pure-eval --accept-flake-config
 
 `scripts/decompile.sh` 是备用的：需要读游戏源码时用它把相关类型 dump 到 `decompile/`（已 gitignore）。
 
+## 作为 r2modman 的 local mod 安装
+
+```bash
+./scripts/package.sh     # 产出 dist/FakeFriendScoreboard-0.1.0.zip（Thunderstore 格式）
+```
+
+r2modman → **Settings → Import local mod** → 选那个 zip → 装进当前 profile。
+之后它就是 `mods.yml` 里受管的本地 mod（可启用/禁用、随 profile 导出），dll 位置由 r2modman 决定。
+
+注意：**不要和手动 copy 的副本共存**。之前用 `./scripts/build.sh --install` 放进去的
+`BepInEx/plugins/FakeFriendScoreboard/` 如果和 r2modman 装出来的目录不是同一个，会加载两份同 GUID 的插件，
+BepInEx 会报重复；确认导入成功后把多余那份删掉。以后更新代码用
+`./scripts/build.sh --install`（覆盖同一个目录）或重新 Import 一次 zip。
+
 ## 测试
 
 1. 用 r2modman 启动 modded profile，开一局带 1–4 个 FakeFriend。

@@ -38,14 +38,22 @@ namespace FakeFriendScoreboard
             BotLocator.Init();
 
             harmony = new Harmony(PluginGuid);
+            // 分开 patch：一个失败不影响另一个。
+            TryPatch(typeof(ScoreboardPatch), "scoreboard");
+            TryPatch(typeof(MasterNamePatch), "bot display name");
+            Log.LogInfo($"{PluginName} {PluginVersion} loaded.");
+        }
+
+        private void TryPatch(Type patchType, string what)
+        {
             try
             {
-                harmony.PatchAll(typeof(ScoreboardPatch));
-                Log.LogInfo($"{PluginName} {PluginVersion} loaded.");
+                harmony.PatchAll(patchType);
+                Log.LogInfo($"patched {what} ({patchType.Name}).");
             }
             catch (Exception e)
             {
-                Log.LogError($"patching failed, mod inactive: {e}");
+                Log.LogError($"patching {what} failed, that part stays off: {e}");
             }
         }
 

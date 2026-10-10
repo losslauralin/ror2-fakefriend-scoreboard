@@ -5,18 +5,20 @@ using RoR2.UI;
 
 namespace FakeFriendScoreboard
 {
+    /// <summary>
+    /// 接管原版计分板构建。
+    ///
+    /// 原版逻辑（SotS 之后）：
+    ///     PlayerCharacterMasterController.instances
+    ///       .Where(x => x.gameObject.activeInHierarchy
+    ///                &amp;&amp; x.master.GetBody() != null
+    ///                &amp;&amp; Util.GetBestMasterName(x.master) != null)
+    /// 然后 SetStripCount(n) + stripAllocator.elements[i].SetMaster(master)。
+    /// 我们照抄真玩家那部分，再把 FakeFriend 的 bot 追加在后面。
+    /// </summary>
     [HarmonyPatch]
     internal static class ScoreboardPatch
     {
-        /// <summary>
-        /// 原版逻辑（SotS 之后）是：
-        ///     PlayerCharacterMasterController.instances
-        ///       .Where(x => x.gameObject.activeInHierarchy
-        ///                &amp;&amp; x.master.GetBody() != null
-        ///                &amp;&amp; Util.GetBestMasterName(x.master) != null)
-        /// 然后 SetStripCount(n) + stripAllocator.elements[i].SetMaster(master)。
-        /// 我们照抄真玩家那部分，再把 bot 追加在后面。
-        /// </summary>
         [HarmonyPrefix]
         [HarmonyPatch(typeof(ScoreboardController), nameof(ScoreboardController.Rebuild))]
         private static bool Rebuild(ScoreboardController __instance)
@@ -51,6 +53,12 @@ namespace FakeFriendScoreboard
                     Plugin.Log.LogDebug($"scoreboard: strip {index} <- {bots[i].name}");
                 }
 
+                if (total != lastLoggedTotal)
+                {
+                    lastLoggedTotal = total;
+                    Plugin.Log.LogInfo($"scoreboard: {masters.Count} player strip(s) + {bots.Count} bot strip(s).");
+                }
+
                 return false;   // 跳过原版 Rebuild
             }
             catch (Exception e)
@@ -60,20 +68,7 @@ namespace FakeFriendScoreboard
             }
         }
 
-        /// <summary>
-        /// bot 没有 NetworkUser，Util.GetBestMasterName 大概率返回 null —— 那计分板条上
-        /// 就没有名字。这里只对 "FakeFriend N" 这种 master 兜底，不影响真玩家。
-        /// </summary>
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(Util), nameof(Util.GetBestMasterName), new[] { typeof(CharacterMaster) })]
-        private static void GetBestMasterName(ref string __result, CharacterMaster master)
-        {
-            if (!string.IsNullOrEmpty(__result)) return;
-            if (!master) return;
-            if (master.name.StartsWith(BotLocator.BotMasterNamePrefix, StringComparison.Ordinal))
-                __result = master.name;
-        }
-
+        private static int lastLoggedTotal = -1;
         private static bool loggedOnce;
 
         private static void LogOnce(Exception e)
@@ -81,6 +76,27 @@ namespace FakeFriendScoreboard
             if (loggedOnce) return;
             loggedOnce = true;
             Plugin.Log.LogError($"scoreboard rebuild failed, falling back to vanilla: {e}");
+        }
+    }
+
+    /// <summary>
+    /// bot 没有 NetworkUser，Util.GetBestMasterName 对它会返回 null —— 那计分板条上就没名字。
+    /// 只对名字形如 "FakeFriend N" 的 master 兜底，不影响真玩家。
+    ///
+    /// 注意：Harmony 靠**参数名**配对，所以这里的形参必须和目标方法的形参同名
+    /// （游戏里是 characterMaster）；名字写错会抛 "Parameter ... not found"。
+    /// </summary>
+    [HarmonyPatch]
+    internal static class MasterNamePatch
+    {
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(Util), nameof(Util.GetBestMasterName), new[] { typeof(CharacterMaster) })]
+        private static void GetBestMasterName(ref string __result, CharacterMaster characterMaster)
+        {
+            if (!string.IsNullOrEmpty(__result)) return;
+            if (!characterMaster) return;
+            if (characterMaster.name.StartsWith(BotLocator.BotMasterNamePrefix, StringComparison.Ordinal))
+                __result = characterMaster.name;
         }
     }
 }

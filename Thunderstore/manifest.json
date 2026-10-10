@@ -1,0 +1,10 @@
+{
+  "name": "FakeFriendScoreboard",
+  "version_number": "0.1.0",
+  "website_url": "",
+  "description": "Shows FakeFriend bots in the Tab scoreboard, with their items and equipment.",
+  "dependencies": [
+    "NotStudio-FakeFriend-1.2.0",
+    "bbepis-BepInExPack-5.4.2122"
+  ]
+}
